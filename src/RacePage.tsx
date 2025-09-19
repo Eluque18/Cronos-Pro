@@ -19,7 +19,8 @@ export default function RacePage() {
     Array.from({ length: 5 }, (_, i) => `P${i + 1}`)
   )
 
-  const [running, setRunning] = useState(false)
+  const [running, setRunning] = useState(false)   // solo para render
+  const runningRef = useRef(false)                // fuente de verdad para RAF
   const [elapsed, setElapsed] = useState(0)
   const [finishes, setFinishes] = useState<number[]>([])
   const [finishNames, setFinishNames] = useState<string[]>([])
@@ -37,7 +38,7 @@ export default function RacePage() {
   }, [count])
 
   const tick = () => {
-    if (!running || t0Ref.current == null) return
+    if (!runningRef.current || t0Ref.current == null) return
     const now = performance.now()
     const delta = now - t0Ref.current
     setElapsed(accRef.current + delta)
@@ -51,23 +52,26 @@ export default function RacePage() {
     setElapsed(0)
     setFinishes([])
     setFinishNames([])
+    runningRef.current = false
     setRunning(false)
     setStage('ready')
   }
 
   const start = () => {
-    if (running) return
+    if (runningRef.current) return
     t0Ref.current = performance.now()
+    runningRef.current = true
     setRunning(true)
     setStage('running')
     rafRef.current = requestAnimationFrame(tick)
   }
 
   const stop = () => {
-    if (!running) return
+    if (!runningRef.current) return
     if (t0Ref.current != null) accRef.current += performance.now() - t0Ref.current
     if (rafRef.current) cancelAnimationFrame(rafRef.current)
     t0Ref.current = null
+    runningRef.current = false
     setRunning(false)
   }
 
@@ -78,12 +82,13 @@ export default function RacePage() {
     setElapsed(0)
     setFinishes([])
     setFinishNames([])
+    runningRef.current = false
     setRunning(false)
     setStage('setup')
   }
 
   const markNext = () => {
-    if (!running || stage !== 'running') return
+    if (!runningRef.current || stage !== 'running') return
     const now = performance.now()
     const totalNow = accRef.current + (t0Ref.current ? (now - t0Ref.current) : 0)
     const idx = finishes.length
@@ -123,9 +128,7 @@ export default function RacePage() {
           <label>
             Cantidad de competidores:&nbsp;
             <input
-              type="number"
-              min={1}
-              max={200}
+              type="number" min={1} max={200}
               value={count}
               onChange={e => setCount(Math.max(1, Math.min(200, Number(e.target.value || 1))))}
               style={{width:100}}
@@ -185,7 +188,10 @@ export default function RacePage() {
             }
             <button onClick={reset}>Reset</button>
             {running && finishes.length < count && (
-              <button onClick={markNext} style={{padding:'12px 18px', fontSize:18, fontWeight:600}}>
+              <button
+                onClick={markNext}
+                style={{padding:'12px 18px', fontSize:18, fontWeight:600}}
+              >
                 Next Position
               </button>
             )}

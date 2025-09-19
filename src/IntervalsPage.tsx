@@ -22,6 +22,7 @@ export default function IntervalsPage() {
   ])
 
   const [idx, setIdx] = useState(0)
+  const idxRef = useRef(0)            // <- índice vivo para RAF
   const [remaining, setRemaining] = useState(0)
 
   const runningRef = useRef(false)
@@ -30,15 +31,12 @@ export default function IntervalsPage() {
   const rafRef = useRef<number | null>(null)
 
   const ensureAudio = async () => {
-    // AudioContext se inicializa cuando el usuario inicia
     try {
       const Ctx: any = (window as any).AudioContext || (window as any).webkitAudioContext
       const ctx = new Ctx()
       if (ctx.state === 'suspended') await ctx.resume()
       return ctx
-    } catch {
-      return null
-    }
+    } catch { return null }
   }
   const beep = async () => {
     try {
@@ -61,6 +59,7 @@ export default function IntervalsPage() {
     if (items.length === 0) return
     const dur = toMs(items[startIndex].minutes, items[startIndex].seconds)
     setIdx(startIndex)
+    idxRef.current = startIndex
     setRemaining(dur)
     remRef.current = dur
     t0Ref.current = performance.now()
@@ -75,11 +74,13 @@ export default function IntervalsPage() {
     const now = performance.now()
     const delta = now - t0Ref.current
     const next = remRef.current - delta
+
     if (next <= 0) {
       void beep()
-      const nextIdx = idx + 1
+      const nextIdx = idxRef.current + 1
       if (nextIdx >= items.length) {
         setIdx(items.length - 1)
+        idxRef.current = items.length - 1
         setRemaining(0)
         runningRef.current = false
         setStage('done')
@@ -88,6 +89,7 @@ export default function IntervalsPage() {
       } else {
         const durNext = toMs(items[nextIdx].minutes, items[nextIdx].seconds)
         setIdx(nextIdx)
+        idxRef.current = nextIdx
         setRemaining(durNext)
         remRef.current = durNext
         t0Ref.current = performance.now()
@@ -107,6 +109,7 @@ export default function IntervalsPage() {
     if (rafRef.current) cancelAnimationFrame(rafRef.current)
     setStage('paused')
   }
+
   const resume = () => {
     if (stage !== 'paused') return
     runningRef.current = true
@@ -114,12 +117,14 @@ export default function IntervalsPage() {
     rafRef.current = requestAnimationFrame(tick)
     setStage('running')
   }
+
   const reset = () => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current)
     runningRef.current = false
     t0Ref.current = null
     remRef.current = 0
     setIdx(0)
+    idxRef.current = 0
     setRemaining(0)
     setStage('editing')
   }
@@ -208,7 +213,7 @@ export default function IntervalsPage() {
               )}
               <button onClick={reset}>Reset</button>
               {stage !== 'running' && stage !== 'done' && (
-                <button onClick={() => void startFrom(idx)}>Reiniciar este intervalo</button>
+                <button onClick={() => void startFrom(idxRef.current)}>Reiniciar este intervalo</button>
               )}
             </div>
           </div>
