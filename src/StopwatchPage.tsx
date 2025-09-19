@@ -34,9 +34,7 @@ export default function StopwatchPage() {
   }
   const pause = () => {
     if (!running) return
-    if (t0Ref.current != null) {
-      accRef.current += performance.now() - t0Ref.current
-    }
+    if (t0Ref.current != null) accRef.current += performance.now() - t0Ref.current
     if (rafRef.current) cancelAnimationFrame(rafRef.current)
     t0Ref.current = null
     setRunning(false)
@@ -69,29 +67,30 @@ export default function StopwatchPage() {
   }, [laps])
 
   return (
-    <div style={{fontFamily:'system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial', padding:16, maxWidth:600, margin:'0 auto'}}>
-      <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
-        <h1 style={{margin:'8px 0'}}>Cronómetro</h1>
-        <Link to="/"><button>Home</button></Link>
+    <div className="container">
+      <div className="header">
+        <h1 className="h1">Cronómetro</h1>
+        <Link to="/"><button className="btn">Home</button></Link>
       </div>
 
-      <div style={{fontSize:48, fontVariantNumeric:'tabular-nums', margin:'16px 0'}}>
-        {format(elapsed)}
-      </div>
+      <div className="card">
+        <div className="timer">{format(elapsed)}</div>
+        <div className="actions sticky-actions">
+          {!running ? <button className="btn btn-primary" onClick={start}>Start</button> : <button className="btn" onClick={pause}>Pause</button>}
+          <button className="btn btn-accent" onClick={lap} disabled={!running}>Lap</button>
+          <button className="btn btn-ghost" onClick={reset}>Reset</button>
+        </div>
 
-      <div style={{display:'flex', gap:12, flexWrap:'wrap'}}>
-        {!running ? <button onClick={start}>Start</button> : <button onClick={pause}>Pause</button>}
-        <button onClick={lap} disabled={!running}>Lap</button>
-        <button onClick={reset}>Reset</button>
+        <h3 style={{color:'#e5e7eb', marginTop:20, marginBottom:8}}>Vueltas</h3>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr><th>#</th><th>Total</th><th>Intervalo</th><th>Δ</th></tr>
+            </thead>
+            <tbody>{lapRows}</tbody>
+          </table>
+        </div>
       </div>
-
-      <h2 style={{marginTop:24}}>Vueltas</h2>
-      <table width="100%" cellPadding={8} style={{borderCollapse:'collapse'}}>
-        <thead>
-          <tr><th>#</th><th>Total</th><th>Intervalo</th><th>Δ</th></tr>
-        </thead>
-        <tbody>{lapRows}</tbody>
-      </table>
     </div>
   )
 }

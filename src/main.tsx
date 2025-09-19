@@ -5,6 +5,7 @@ import Home from './Home'
 import StopwatchPage from './StopwatchPage'
 import RacePage from './RacePage'
 import IntervalsPage from './IntervalsPage'
+import Styles from './styles.css'
 
 const el = document.getElementById('root')
 if (!el) throw new Error('No se encontró #root')

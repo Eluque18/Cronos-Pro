@@ -15,20 +15,23 @@ function fmt(ms: number) {
 export default function RacePage() {
   const [stage, setStage] = useState<Stage>('setup')
   const [count, setCount] = useState<number>(5)
-  const [names, setNames] = useState<string[]>(() =>
-    Array.from({ length: 5 }, (_, i) => `P${i + 1}`)
+  const [names, setNames] = useState<string[]>(
+    () => Array.from({ length: 5 }, (_, i) => `P${i + 1}`)
   )
 
-  const [running, setRunning] = useState(false)   // solo para render
-  const runningRef = useRef(false)                // fuente de verdad para RAF
+  // Estado para render
+  const [running, setRunning] = useState(false)
   const [elapsed, setElapsed] = useState(0)
   const [finishes, setFinishes] = useState<number[]>([])
   const [finishNames, setFinishNames] = useState<string[]>([])
 
+  // Refs: fuente de verdad para el RAF
+  const runningRef = useRef(false)
   const t0Ref = useRef<number | null>(null)
   const accRef = useRef(0)
   const rafRef = useRef<number | null>(null)
 
+  // Ajusta el array de nombres al tamaño "count"
   useEffect(() => {
     setNames(prev => {
       const arr = prev.slice(0, count)
@@ -37,6 +40,7 @@ export default function RacePage() {
     })
   }, [count])
 
+  // Frame loop
   const tick = () => {
     if (!runningRef.current || t0Ref.current == null) return
     const now = performance.now()
@@ -45,6 +49,7 @@ export default function RacePage() {
     rafRef.current = requestAnimationFrame(tick)
   }
 
+  // Paso 1: confirmar (no arranca reloj)
   const confirmRace = () => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current)
     t0Ref.current = null
@@ -57,6 +62,7 @@ export default function RacePage() {
     setStage('ready')
   }
 
+  // Paso 2: start (arranca reloj)
   const start = () => {
     if (runningRef.current) return
     t0Ref.current = performance.now()
@@ -117,112 +123,116 @@ export default function RacePage() {
   }, [finishes, finishNames, firstTime])
 
   return (
-    <div style={{fontFamily:'system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial', padding:16, maxWidth:720, margin:'0 auto'}}>
-      <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12}}>
-        <h1 style={{margin:0}}>Carrera multi-competidor</h1>
-        <Link to="/"><button>Home</button></Link>
+    <div className="container">
+      <div className="header">
+        <h1 className="h1">Carrera multi-competidor</h1>
+        <Link to="/"><button className="btn">Home</button></Link>
       </div>
 
-      {stage === 'setup' && (
-        <div style={{display:'grid', gap:12}}>
-          <label>
-            Cantidad de competidores:&nbsp;
-            <input
-              type="number" min={1} max={200}
-              value={count}
-              onChange={e => setCount(Math.max(1, Math.min(200, Number(e.target.value || 1))))}
-              style={{width:100}}
-            />
-          </label>
+      <div className="card">
+        {/* SETUP */}
+        {stage === 'setup' && (
+          <div className="grid" style={{gap:12}}>
+            <label className="row">
+              <small className="subtle">Cantidad</small>
+              <input
+                className="number"
+                type="number" min={1} max={200}
+                value={count}
+                onChange={e => setCount(Math.max(1, Math.min(200, Number(e.target.value || 1))))}
+                style={{maxWidth:120}}
+              />
+            </label>
 
-          <div style={{display:'grid', gap:8}}>
-            {Array.from({ length: count }).map((_, i) => (
-              <div key={i} style={{display:'flex', alignItems:'center', gap:8}}>
-                <div style={{width:80, opacity:.7}}>Pos {i+1}</div>
-                <input
-                  type="text"
-                  value={names[i] ?? `P${i+1}`}
-                  onChange={e => {
-                    const v = e.target.value
-                    setNames(prev => {
-                      const arr = [...prev]
-                      arr[i] = v
-                      return arr
-                    })
-                  }}
-                  placeholder={`P${i+1}`}
-                  style={{flex:1, padding:'6px 8px'}}
-                />
-              </div>
-            ))}
-          </div>
-
-          <button onClick={confirmRace} style={{padding:'10px 14px', fontSize:16}}>
-            Confirmar carrera
-          </button>
-        </div>
-      )}
-
-      {stage === 'ready' && (
-        <div style={{display:'grid', gap:12}}>
-          <div style={{fontSize:14, color:'#555'}}>Competidores listos: {count}</div>
-          <div style={{fontSize:40, fontVariantNumeric:'tabular-nums'}}>{fmt(0)}</div>
-          <div style={{display:'flex', gap:12, flexWrap:'wrap'}}>
-            <button onClick={start} style={{padding:'10px 14px', fontSize:16}}>Start</button>
-            <button onClick={reset}>Volver a editar</button>
-          </div>
-          <div style={{color:'#555'}}>Siguiente en llegar: <b>{names[finishes.length] ?? `P${finishes.length + 1}`}</b></div>
-        </div>
-      )}
-
-      {(stage === 'running' || stage === 'done') && (
-        <>
-          <div style={{marginTop:8, fontSize:40, fontVariantNumeric:'tabular-nums'}}>
-            {fmt(elapsed)}
-          </div>
-
-          <div style={{display:'flex', gap:12, flexWrap:'wrap', marginTop:8}}>
-            {running
-              ? <button onClick={stop}>Stop</button>
-              : (stage !== 'done' ? <button onClick={start}>Start</button> : <button disabled>Finalizado</button>)
-            }
-            <button onClick={reset}>Reset</button>
-            {running && finishes.length < count && (
-              <button
-                onClick={markNext}
-                style={{padding:'12px 18px', fontSize:18, fontWeight:600}}
-              >
-                Next Position
-              </button>
-            )}
-          </div>
-
-          <p style={{marginTop:8, color:'#555'}}>
-            Llegadas registradas: <b>{finishes.length}</b> / {count} — Siguiente: <b>{names[finishes.length] ?? `P${finishes.length + 1}`}</b>
-          </p>
-
-          <h2 style={{marginTop:16}}>Resultados</h2>
-          <div style={{overflowX:'auto'}}>
-            <table width="100%" cellPadding={8} style={{borderCollapse:'collapse', minWidth:480}}>
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Competidor</th>
-                  <th>Tiempo</th>
-                  <th>Gap</th>
-                </tr>
-              </thead>
-              <tbody>{tableRows}</tbody>
-            </table>
-          </div>
-
-          {stage === 'done' && (
-            <div style={{marginTop:12, color:'#2563eb', fontWeight:600}}>
-              Carrera finalizada automáticamente (se registraron {count} llegadas).
+            <div className="grid" style={{gap:8}}>
+              {Array.from({ length: count }).map((_, i) => (
+                <div key={i} className="grid grid-setup">
+                  <div className="subtle">Pos {i+1}</div>
+                  <input
+                    className="input"
+                    type="text"
+                    value={names[i] ?? `P${i+1}`}
+                    onChange={e => {
+                      const v = e.target.value
+                      setNames(prev => {
+                        const arr = [...prev]
+                        arr[i] = v
+                        return arr
+                      })
+                    }}
+                    placeholder={`P${i+1}`}
+                  />
+                </div>
+              ))}
             </div>
-          )}
-        </>
-      )}
+
+            <div className="actions sticky-actions">
+              <button className="btn btn-primary" onClick={confirmRace}>
+                Confirmar carrera
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* READY */}
+        {stage === 'ready' && (
+          <>
+            <div className="subtle">Competidores listos: {count}</div>
+            <div className="timer">{fmt(0)}</div>
+            <div className="actions sticky-actions">
+              <button className="btn btn-primary" onClick={start}>Start</button>
+              <button className="btn btn-ghost" onClick={reset}>Volver a editar</button>
+            </div>
+            <div className="subtle">Siguiente en llegar: <b>{names[finishes.length] ?? `P${finishes.length + 1}`}</b></div>
+          </>
+        )}
+
+        {/* RUNNING / DONE */}
+        {(stage === 'running' || stage === 'done') && (
+          <>
+            <div className="timer">{fmt(elapsed)}</div>
+
+            <div className="actions sticky-actions">
+              {running
+                ? <button className="btn" onClick={stop}>Stop</button>
+                : (stage !== 'done'
+                    ? <button className="btn btn-primary" onClick={start}>Start</button>
+                    : <button className="btn" disabled>Finalizado</button>)
+              }
+              <button className="btn btn-ghost" onClick={reset}>Reset</button>
+              {running && finishes.length < count && (
+                <button className="btn btn-accent" onClick={markNext}>Next Position</button>
+              )}
+            </div>
+
+            <p className="subtle" style={{marginTop:8}}>
+              Llegadas registradas: <b>{finishes.length}</b> / {count} — Siguiente: <b>{names[finishes.length] ?? `P${finishes.length + 1}`}</b>
+            </p>
+
+            <h3 style={{color:'#e5e7eb'}}>Resultados</h3>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Competidor</th>
+                    <th>Tiempo</th>
+                    <th>Gap</th>
+                  </tr>
+                </thead>
+                <tbody>{tableRows}</tbody>
+              </table>
+            </div>
+
+            {stage === 'done' && (
+              <div style={{marginTop:12, color:'#38bdf8', fontWeight:600}}>
+                Carrera finalizada automáticamente (se registraron {count} llegadas).
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   )
 }
+
